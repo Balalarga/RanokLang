@@ -1,0 +1,16 @@
+#include ""
+
+struct A {
+	func C() {}
+};
+
+func a() {}
+func foo() { return 10; }
+a();
+
+int s = foo() + 2;
+
+vec2 s2 = {20, 2};
+vec2 s3 = s2 + vec2{10, 20};
+
+return s;

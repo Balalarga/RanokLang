@@ -6,15 +6,26 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")#"MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 
 
-add_executable(RanokLang main.cpp)
+add_executable(RanokLang Source/main.cpp
+    Source/RanokListener.cpp
+    Source/RanokListener.h
+    Source/RanokProcessor.cpp
+    Source/RanokProcessor.h)
 
 target_link_libraries(RanokLang PUBLIC antlr4_static)
+target_compile_definitions(RanokLang PUBLIC RNL_EXAMPLES_DIR="${CMAKE_CURRENT_LIST_DIR}/Examples")
 
+
+add_custom_target(GenerateParser DEPENDS ${PROJECT_SOURCE_DIR}/Grammar/Generated)
 add_custom_command(
-    TARGET RanokLang PRE_BUILD
+    OUTPUT ${PROJECT_SOURCE_DIR}/Grammar/Generated
     COMMAND
-    antlr4 -Dlanguage=Cpp ${PROJECT_SOURCE_DIR}/Grammar/Ranok.g4 -o ${PROJECT_SOURCE_DIR}/Grammar/Generated
+    antlr4 -Dlanguage=Cpp ${PROJECT_SOURCE_DIR}/Grammar/Ranok.g4 -o ${PROJECT_SOURCE_DIR}/Grammar/Generated -visitor
+    DEPENDS ${PROJECT_SOURCE_DIR}/Grammar/Ranok.g4
 )
+add_dependencies(RanokLang GenerateParser)
+
+target_include_directories(RanokLang PUBLIC ${PROJECT_SOURCE_DIR}/Grammar/Generated/)
 target_sources(RanokLang PUBLIC
     ${PROJECT_SOURCE_DIR}/Grammar/Generated/RanokLexer.h
     ${PROJECT_SOURCE_DIR}/Grammar/Generated/RanokLexer.cpp

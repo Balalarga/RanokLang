@@ -1,44 +1,131 @@
 grammar Ranok;
 
-Int: [0-9]+;
-Float: [0-9]+.[0-9]+;
-Id: [a-zA-Z] [a-zA-Z0-9]+;
-NewLine: [\r\n]+ -> skip;
-Void: 'void';
-Return: 'return';
-Var: 'var';
+fragment Int
+    : '0'
+    | [1-9] [0-9]*
+    ;
 
-LeftParen: '(';
-RightParen: ')';
+Float
+	: Int '.'
+	| '.' Int
+	| Int '.' Int
+	;
+Number
+	: Int | Float
+	;
 
-LeftBracket: '[';
-RightBracket: ']';
+Whitespaces
+	: [ \t\r\n]+ -> skip
+	;
 
-LeftBrace: '{';
-RightBrace: '}';
+Directive
+	: '#' ~ [\n]* -> channel(HIDDEN)
+	;
+MultiLineMacro
+    : '#' (~[\n]*? '\\' '\r'? '\n')+ ~ [\n]+ -> channel (HIDDEN)
+    ;
 
+BlockComment
+    : '/*' .*? '*/' -> channel(HIDDEN)
+    ;
+
+LineComment
+    : '//' ~[\r\n]* -> channel(HIDDEN)
+    ;
+
+Id
+    : IdentifierNondigit (IdentifierNondigit | [0-9])*
+    ;
+fragment IdentifierNondigit
+    : Nondigit
+    | UniversalCharacterName
+    ;
+fragment UniversalCharacterName
+    : '\\u' HexQuad
+    | '\\U' HexQuad HexQuad
+    ;
+fragment HexQuad
+    : Hex Hex Hex Hex
+    ;
+fragment Hex
+    : [0-9a-fA-F]
+    ;
+fragment Nondigit
+    : [a-zA-Z_]
+    ;
+
+String
+    : '"' (Esc | SafeCodePoint)* '"'
+    ;
+fragment Esc
+    : '\\' (["\\/bfnrt] | UniversalCharacterName)
+    ;
+fragment SafeCodePoint
+    : ~ ["\\\u0000-\u001F]
+    ;
 
 binaryOperator
-    : '&&'
-    | '||'
-    | '*'
-    | '+'
-    | '-'
+    : '*'
     | '/'
-    ;
-unaryOperator
-    : '&'
-    | '*'
     | '+'
     | '-'
-    | '!'
+    | '||'
+    | '&&'
     ;
 
-prog:	expr EOF;
-expr:	expr binaryOperator expr
-    |	Int
-    |	Id
-    |	'(' expr ')'
-    ;
+funcDecl
+	: 'func' Id '(' funcArgs? ')' '{' primaryExpr? '}'
+	;
+
+funcArgs
+	: varDecl (',' varDecl)?
+	;
+
+funcCall
+	: Id '(' (expr (',' expr)?)? ')'
+	;
+
+varDecl
+	: ('var' | Id) Id ('=' expr)?
+	;
+
+structDecl
+	: 'struct' Id '{' (funcDecl | varDecl)? '}'
+	;
+
+returnExpr
+	: 'return' expr
+	;
+
+main
+	: mainExpr EOF
+	;
+
+mainExpr
+	: primaryExpr+
+	;
 
 
+primaryExpr
+	: funcDecl
+	| funcCall ';'
+	| structDecl ';'
+	| varDecl ';'
+	| returnExpr ';'
+	;
+
+uniformInit
+	: '{' expr (',' expr)? '}'
+	;
+typedUniformInit
+	: Id uniformInit
+	;
+
+expr
+	: expr binaryOperator expr
+	| typedUniformInit
+	| uniformInit
+	| funcCall
+	| Id
+	| Number
+	;
